@@ -1,27 +1,41 @@
 import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import api from '../services/api';
-import { MdDelete, MdShoppingCartCheckout } from 'react-icons/md';
+import { MdDelete, MdShoppingCartCheckout, MdClose } from 'react-icons/md';
+import InvoicePrintView from '../components/InvoicePrintView';
 
 const CartPage = () => {
     const { cartItems, updateSalePrice, removeFromCart, clearCart, cartTotal } = useCart();
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+    const [clientName, setClientName] = useState('Bilal Mobile'); // Default based on image
+    const [clientPhone, setClientPhone] = useState('030-748-71570'); // Default based on image
 
-    const handleCheckout = async () => {
-        // Validate all sale prices
+    const handleOpenCheckoutModal = () => {
         const invalidItems = cartItems.filter((item) => !item.salePricePerUnit || item.salePricePerUnit <= 0);
         if (invalidItems.length > 0) {
             setError('Please enter a valid sale price for all items');
+            return;
+        }
+        setError('');
+        setShowCheckoutModal(true);
+    };
+
+    const handleCheckout = async () => {
+        if (!clientName || !clientPhone) {
+            setError('Client Name and Phone are required');
             return;
         }
 
         setLoading(true);
         setError('');
         try {
-            await api.post('/sales/checkout', { items: cartItems });
-            setSuccess('Sale completed successfully!');
+            await api.post('/sales/checkout', { items: cartItems, clientName, clientPhone });
+            setSuccess('Sale completed successfully! Invoice generated.');
+            setShowCheckoutModal(false);
             clearCart();
             setTimeout(() => setSuccess(''), 4000);
         } catch (err) {
@@ -30,6 +44,10 @@ const CartPage = () => {
             setLoading(false);
         }
     };
+
+    const filteredCartItems = cartItems.filter(item =>
+        item.productName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <div className="page-container">
@@ -40,6 +58,20 @@ const CartPage = () => {
 
             {success && <div className="alert alert-success">{success}</div>}
             {error && <div className="alert alert-error">{error}</div>}
+
+            {/* Search Bar */}
+            {cartItems.length > 0 && (
+                <div className="search-bar-container" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+                    <input
+                        type="text"
+                        placeholder="Search cart item by name..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="table-input"
+                        style={{ width: '100%', maxWidth: '400px', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
+                    />
+                </div>
+            )}
 
             {cartItems.length === 0 ? (
                 <div className="empty-state">
@@ -62,7 +94,7 @@ const CartPage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {cartItems.map((item) => {
+                                {filteredCartItems.map((item) => {
                                     const totalSale = item.salePricePerUnit * item.quantity;
                                     const totalPurchase = item.purchaseCostPerUnit * item.quantity;
                                     const profit = totalSale - totalPurchase;
@@ -115,11 +147,49 @@ const CartPage = () => {
                                     PKR {cartTotal.totalProfit.toLocaleString()}
                                 </span>
                             </div>
-                            <button className="btn btn-primary btn-block" onClick={handleCheckout} disabled={loading}>
-                                {loading ? <span className="spinner-sm" /> : <><MdShoppingCartCheckout /> Save Sale</>}
+                            <button className="btn btn-primary btn-block" onClick={handleOpenCheckoutModal} disabled={loading || cartItems.length === 0}>
+                                <MdShoppingCartCheckout /> Checkout
                             </button>
                         </div>
                     </div>
+
+                    {showCheckoutModal && (
+                        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                            <div className="modal-content" style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '12px', width: '90%', maxWidth: '400px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                    <h2 style={{ margin: 0 }}>Client Details</h2>
+                                    <button onClick={() => setShowCheckoutModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}>
+                                        <MdClose />
+                                    </button>
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '15px' }}>
+                                    <label>Client Name</label>
+                                    <input
+                                        type="text"
+                                        className="table-input"
+                                        value={clientName}
+                                        onChange={(e) => setClientName(e.target.value)}
+                                        placeholder="Enter client name"
+                                        style={{ width: '100%', padding: '10px', marginTop: '5px' }}
+                                    />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '20px' }}>
+                                    <label>Client Phone Number</label>
+                                    <input
+                                        type="text"
+                                        className="table-input"
+                                        value={clientPhone}
+                                        onChange={(e) => setClientPhone(e.target.value)}
+                                        placeholder="Enter client phone"
+                                        style={{ width: '100%', padding: '10px', marginTop: '5px' }}
+                                    />
+                                </div>
+                                <button className="btn btn-success btn-block" onClick={handleCheckout} disabled={loading}>
+                                    {loading ? <span className="spinner-sm" /> : 'Generate Invoice & Checkout'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
         </div>

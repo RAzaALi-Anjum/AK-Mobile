@@ -11,6 +11,7 @@ const ViewProductsPage = () => {
     const [editForm, setEditForm] = useState({});
     const [saving, setSaving] = useState(false);
     const [activeCategory, setActiveCategory] = useState('All');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const fetchProducts = async (category) => {
         setLoading(true);
@@ -72,6 +73,10 @@ const ViewProductsPage = () => {
         }
     };
 
+    const filteredProducts = products.filter(product =>
+        product.productName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <div className="page-container">
             <div className="page-header">
@@ -92,15 +97,27 @@ const ViewProductsPage = () => {
                 ))}
             </div>
 
+            {/* Search Bar */}
+            <div className="search-bar-container" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+                <input
+                    type="text"
+                    placeholder="Search product by name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="table-input"
+                    style={{ width: '100%', maxWidth: '400px', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
+                />
+            </div>
+
             {loading ? (
                 <div className="page-loading"><div className="spinner" /></div>
-            ) : products.length === 0 ? (
+            ) : filteredProducts.length === 0 ? (
                 <div className="empty-state">
-                    <p>No products found{activeCategory !== 'All' ? ` in ${activeCategory} category` : ''}. Add your first product!</p>
+                    <p>No products found{activeCategory !== 'All' ? ` in ${activeCategory} category` : ''}.</p>
                 </div>
             ) : (
                 <div className="product-cards-grid">
-                    {products.map((product) => (
+                    {filteredProducts.map((product) => (
                         <div key={product._id} className="product-card">
                             {editProduct === product._id ? (
                                 <div className="product-edit-form">

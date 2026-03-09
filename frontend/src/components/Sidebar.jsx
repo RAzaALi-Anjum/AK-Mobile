@@ -15,6 +15,7 @@ import {
     MdExpandLess,
     MdMenu,
     MdClose,
+    MdReceipt,
 } from 'react-icons/md';
 
 const Sidebar = () => {
@@ -98,6 +99,11 @@ const Sidebar = () => {
                 <NavLink to="/income" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                     <span className="sidebar-icon"><MdAttachMoney /></span>
                     {!collapsed && <span className="sidebar-label">Income</span>}
+                </NavLink>
+
+                <NavLink to="/invoices" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                    <span className="sidebar-icon"><MdReceipt /></span>
+                    {!collapsed && <span className="sidebar-label">Invoices</span>}
                 </NavLink>
             </nav>
 

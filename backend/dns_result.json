@@ -1,0 +1,27 @@
+{
+  "srv": [
+    {
+      "name": "ac-tv6rnm0-shard-00-01.quurzyz.mongodb.net",
+      "port": 27017,
+      "priority": 0,
+      "weight": 0
+    },
+    {
+      "name": "ac-tv6rnm0-shard-00-00.quurzyz.mongodb.net",
+      "port": 27017,
+      "priority": 0,
+      "weight": 0
+    },
+    {
+      "name": "ac-tv6rnm0-shard-00-02.quurzyz.mongodb.net",
+      "port": 27017,
+      "priority": 0,
+      "weight": 0
+    }
+  ],
+  "txt": [
+    [
+      "authSource=admin&replicaSet=atlas-10izdc-shard-0"
+    ]
+  ]
+}

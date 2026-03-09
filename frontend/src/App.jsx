@@ -8,6 +8,7 @@ import AddProductPage from './pages/AddProductPage';
 import ViewProductsPage from './pages/ViewProductsPage';
 import SalesPage from './pages/SalesPage';
 import CartPage from './pages/CartPage';
+import InvoicesPage from './pages/InvoicesPage';
 import IncomePage from './pages/IncomePage';
 
 const ProtectedRoute = ({ children }) => {
@@ -36,6 +37,7 @@ function App() {
                             <Route path="products/view" element={<ViewProductsPage />} />
                             <Route path="sales" element={<SalesPage />} />
                             <Route path="cart" element={<CartPage />} />
+                            <Route path="invoices" element={<InvoicesPage />} />
                             <Route path="income" element={<IncomePage />} />
                         </Route>
                         <Route path="*" element={<Navigate to="/login" replace />} />

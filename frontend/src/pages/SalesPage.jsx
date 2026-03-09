@@ -10,6 +10,7 @@ const SalesPage = () => {
     const [loading, setLoading] = useState(true);
     const [quantities, setQuantities] = useState({});
     const [activeCategory, setActiveCategory] = useState('All');
+    const [searchQuery, setSearchQuery] = useState('');
     const { addToCart } = useCart();
 
     const fetchProducts = async (category) => {
@@ -43,6 +44,10 @@ const SalesPage = () => {
         alert(`${product.productName} (x${qty}) added to cart!`);
     };
 
+    const filteredProducts = products.filter(product =>
+        product.productName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <div className="page-container">
             <div className="page-header">
@@ -63,15 +68,27 @@ const SalesPage = () => {
                 ))}
             </div>
 
+            {/* Search Bar */}
+            <div className="search-bar-container" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+                <input
+                    type="text"
+                    placeholder="Search product by name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="table-input"
+                    style={{ width: '100%', maxWidth: '400px', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
+                />
+            </div>
+
             {loading ? (
                 <div className="page-loading"><div className="spinner" /></div>
-            ) : products.length === 0 ? (
+            ) : filteredProducts.length === 0 ? (
                 <div className="empty-state">
                     <p>No products available for sale{activeCategory !== 'All' ? ` in ${activeCategory} category` : ''}.</p>
                 </div>
             ) : (
                 <div className="product-cards-grid">
-                    {products.map((product) => (
+                    {filteredProducts.map((product) => (
                         <div key={product._id} className="product-card sale-card">
                             <div className="product-card-badge">{product.productType}</div>
                             <h3 className="product-card-title">{product.productName}</h3>

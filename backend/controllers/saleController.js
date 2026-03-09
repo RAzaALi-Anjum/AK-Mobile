@@ -1,15 +1,19 @@
 const Sale = require('../models/Sale');
 const Product = require('../models/Product');
+const Invoice = require('../models/Invoice');
 
 // @desc    Checkout cart — process sale, reduce stock, calculate profit
 // @route   POST /api/sales/checkout
 const checkout = async (req, res) => {
     try {
-        const { items } = req.body;
+        const { items, clientName, clientPhone } = req.body;
         // items: [{ productId, productName, productType, quantity, purchaseCostPerUnit, salePricePerUnit }]
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ message: 'Cart is empty' });
+        }
+        if (!clientName || !clientPhone) {
+            return res.status(400).json({ message: 'Client Name and Phone are required' });
         }
 
         const salesRecords = [];
@@ -57,9 +61,34 @@ const checkout = async (req, res) => {
             salesRecords.push(sale);
         }
 
+        // Generate Invoice Number
+        const currentCount = await Invoice.countDocuments();
+        const invoiceNumber = `INV${currentCount + 1}`;
+
+        // Create Invoice Record
+        const totalAmount = salesRecords.reduce((sum, sale) => sum + sale.totalSale, 0);
+
+        const invoiceData = items.map(item => ({
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            purchaseCostPerUnit: item.purchaseCostPerUnit,
+            salePricePerUnit: item.salePricePerUnit,
+            totalSale: item.salePricePerUnit * item.quantity,
+        }));
+
+        const invoice = await Invoice.create({
+            invoiceNumber,
+            clientName,
+            clientPhone,
+            products: invoiceData,
+            totalAmount
+        });
+
         res.status(201).json({
             message: 'Sale completed successfully',
             sales: salesRecords,
+            invoice: invoice,
         });
     } catch (error) {
         console.error('Checkout error:', error);

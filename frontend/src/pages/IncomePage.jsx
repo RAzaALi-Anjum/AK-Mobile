@@ -7,6 +7,7 @@ const IncomePage = () => {
     const [income, setIncome] = useState({ sales: [], dailyTotals: [], summary: { totalSales: 0, totalPurchaseCost: 0, totalProfit: 0, totalLoss: 0 } });
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
+    const [searchQuery, setSearchQuery] = useState('');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
 
@@ -30,6 +31,10 @@ const IncomePage = () => {
     useEffect(() => {
         fetchIncome();
     }, [fetchIncome]);
+
+    const filteredSales = income.sales.filter(sale =>
+        sale.productName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <div className="page-container">
@@ -68,6 +73,18 @@ const IncomePage = () => {
                 )}
             </div>
 
+            {/* Search Bar */}
+            <div className="search-bar-container" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+                <input
+                    type="text"
+                    placeholder="Search sale by product name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="table-input"
+                    style={{ width: '100%', maxWidth: '400px', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
+                />
+            </div>
+
             {loading ? (
                 <div className="page-loading"><div className="spinner" /></div>
             ) : (
@@ -101,7 +118,7 @@ const IncomePage = () => {
                     </div>
 
                     {/* Sales Table */}
-                    {income.sales.length === 0 ? (
+                    {filteredSales.length === 0 ? (
                         <div className="empty-state">
                             <p>No sales recorded{activeCategory !== 'All' ? ` for ${activeCategory}` : ''}{fromDate || toDate ? ' in selected date range' : ''}.</p>
                         </div>
@@ -121,7 +138,7 @@ const IncomePage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {income.sales.map((sale) => (
+                                        {filteredSales.map((sale) => (
                                             <tr key={sale._id}>
                                                 <td className="fw-600">{sale.productName}</td>
                                                 <td><span className="table-badge">{sale.productType}</span></td>

@@ -8,6 +8,7 @@ const Admin = require('./models/Admin');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const saleRoutes = require('./routes/saleRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes');
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
