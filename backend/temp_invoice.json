@@ -1,0 +1,21 @@
+{
+  "_id": "69af7069fba243cd9ee592b8",
+  "invoiceNumber": "INV1",
+  "clientName": "Bilal Mobile",
+  "clientPhone": "030-748-71570",
+  "products": [
+    {
+      "productId": "69af6b00a66e72e884903a9e",
+      "productName": "2mp simple",
+      "quantity": 1,
+      "purchaseCostPerUnit": 20000,
+      "salePricePerUnit": 25000,
+      "totalSale": 25000,
+      "_id": "69af7069fba243cd9ee592b9"
+    }
+  ],
+  "totalAmount": 25000,
+  "createdAt": "2026-03-10T01:14:17.915Z",
+  "updatedAt": "2026-03-10T01:14:17.915Z",
+  "__v": 0
+}

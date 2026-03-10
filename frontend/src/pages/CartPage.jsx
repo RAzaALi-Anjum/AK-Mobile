@@ -13,6 +13,9 @@ const CartPage = () => {
     const [showCheckoutModal, setShowCheckoutModal] = useState(false);
     const [clientName, setClientName] = useState('Bilal Mobile'); // Default based on image
     const [clientPhone, setClientPhone] = useState('030-748-71570'); // Default based on image
+    const [discount, setDiscount] = useState('');
+    const [paymentType, setPaymentType] = useState('Full Payment');
+    const [paidAmount, setPaidAmount] = useState('');
 
     const handleOpenCheckoutModal = () => {
         const invalidItems = cartItems.filter((item) => !item.salePricePerUnit || item.salePricePerUnit <= 0);
@@ -30,13 +33,32 @@ const CartPage = () => {
             return;
         }
 
+        const totalAmount = cartTotal.totalSale;
+        const discountAmt = Number(discount) || 0;
+
+        if (discountAmt > totalAmount) {
+            setError('Discount cannot exceed total amount');
+            return;
+        }
+
+        const grandTotal = totalAmount - discountAmt;
+        const finalPaidAmt = paymentType === 'Full Payment' ? grandTotal : (Number(paidAmount) || 0);
+
+        if (finalPaidAmt > grandTotal) {
+            setError('Paid amount cannot exceed grand total');
+            return;
+        }
+
         setLoading(true);
         setError('');
         try {
-            await api.post('/sales/checkout', { items: cartItems, clientName, clientPhone });
+            await api.post('/sales/checkout', { items: cartItems, clientName, clientPhone, discount: discountAmt, paymentType, paidAmount: finalPaidAmt });
             setSuccess('Sale completed successfully! Invoice generated.');
             setShowCheckoutModal(false);
             clearCart();
+            setDiscount('');
+            setPaymentType('Full Payment');
+            setPaidAmount('');
             setTimeout(() => setSuccess(''), 4000);
         } catch (err) {
             setError(err.response?.data?.message || 'Checkout failed');
@@ -184,6 +206,53 @@ const CartPage = () => {
                                         style={{ width: '100%', padding: '10px', marginTop: '5px' }}
                                     />
                                 </div>
+                                <div className="form-group" style={{ marginBottom: '15px' }}>
+                                    <label>Discount Amount (PKR)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        className="table-input"
+                                        value={discount}
+                                        onChange={(e) => setDiscount(e.target.value)}
+                                        placeholder="Enter discount in PKR"
+                                        style={{ width: '100%', padding: '10px', marginTop: '5px' }}
+                                    />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '15px' }}>
+                                    <label>Payment Type</label>
+                                    <select
+                                        className="table-input"
+                                        value={paymentType}
+                                        onChange={(e) => setPaymentType(e.target.value)}
+                                        style={{ width: '100%', padding: '10px', marginTop: '5px' }}
+                                    >
+                                        <option value="Full Payment">Full Payment</option>
+                                        <option value="Partial Payment">Partial Payment</option>
+                                    </select>
+                                </div>
+
+                                {paymentType === 'Partial Payment' && (
+                                    <div className="form-group" style={{ marginBottom: '15px' }}>
+                                        <label>Paid Amount (PKR)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            className="table-input"
+                                            value={paidAmount}
+                                            onChange={(e) => setPaidAmount(e.target.value)}
+                                            placeholder="Enter paid amount"
+                                            style={{ width: '100%', padding: '10px', marginTop: '5px' }}
+                                        />
+                                        <div style={{ marginTop: '5px', fontSize: '13px', color: '#666' }}>
+                                            Remaining: PKR {(cartTotal.totalSale - (Number(discount) || 0) - (Number(paidAmount) || 0)).toLocaleString()}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div style={{ borderTop: '1px solid #ccc', paddingTop: '10px', marginBottom: '20px', fontWeight: 'bold' }}>
+                                    Grand Total: PKR {(cartTotal.totalSale - (Number(discount) || 0)).toLocaleString()}
+                                </div>
+
                                 <button className="btn btn-success btn-block" onClick={handleCheckout} disabled={loading}>
                                     {loading ? <span className="spinner-sm" /> : 'Generate Invoice & Checkout'}
                                 </button>

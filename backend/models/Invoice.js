@@ -22,6 +22,7 @@ const invoiceSchema = new mongoose.Schema(
                     ref: 'Product',
                 },
                 productName: String,
+                productType: String,
                 quantity: Number,
                 purchaseCostPerUnit: Number, // Storing for record-keeping if needed later
                 salePricePerUnit: Number,
@@ -31,6 +32,38 @@ const invoiceSchema = new mongoose.Schema(
         totalAmount: {
             type: Number,
             required: true,
+        },
+        discountAmount: {
+            type: Number,
+            default: 0,
+        },
+        grandTotal: {
+            type: Number,
+            required: true,
+        },
+        paymentType: {
+            type: String,
+            enum: ['Full Payment', 'Partial Payment'],
+            default: 'Full Payment',
+        },
+        paidAmount: {
+            type: Number,
+            required: true,
+        },
+        remainingAmount: {
+            type: Number,
+            required: true,
+        },
+        paymentHistory: [
+            {
+                date: { type: Date, default: Date.now },
+                amount: { type: Number, required: true },
+            }
+        ],
+        orderStatus: {
+            type: String,
+            enum: ['Paid', 'Pending'],
+            default: 'Paid',
         },
         createdAt: {
             type: Date,

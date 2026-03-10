@@ -42,8 +42,8 @@ const InvoicesPage = () => {
     };
 
     const filteredInvoices = invoices.filter(invoice =>
-        invoice.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())
+        (invoice.clientName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (invoice.invoiceNumber?.toLowerCase() || '').includes(searchQuery.toLowerCase())
     );
 
     return (
@@ -79,7 +79,7 @@ const InvoicesPage = () => {
                                 <th>Invoice Number</th>
                                 <th>Client Name</th>
                                 <th>Client Phone</th>
-                                <th>Total Amount</th>
+                                <th>Grand Total</th>
                                 <th>Date</th>
                                 <th style={{ textAlign: 'center' }}>Actions</th>
                             </tr>
@@ -90,7 +90,7 @@ const InvoicesPage = () => {
                                     <td className="fw-600 text-primary">{invoice.invoiceNumber}</td>
                                     <td>{invoice.clientName}</td>
                                     <td>{invoice.clientPhone}</td>
-                                    <td className="fw-600 text-success">PKR {invoice.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    <td className="fw-600 text-success">PKR {(invoice.grandTotal || invoice.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                     <td>{new Date(invoice.createdAt).toLocaleDateString()}</td>
                                     <td style={{ textAlign: 'center' }}>
                                         <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>

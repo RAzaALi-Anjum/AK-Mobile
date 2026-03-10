@@ -1,0 +1,22 @@
+[
+  {
+    "_id": "69af7069fba243cd9ee592b8",
+    "invoiceNumber": "INV1",
+    "clientName": "Bilal Mobile",
+    "totalAmount": 25000
+  },
+  {
+    "_id": "69af72927ca99670061b5292",
+    "invoiceNumber": "INV2",
+    "clientName": "Test Client API",
+    "totalAmount": 1000,
+    "grandTotal": 900
+  },
+  {
+    "_id": "69af72c393e311ae7cd1dc77",
+    "invoiceNumber": "INV102",
+    "clientName": "Direct Mongo Test",
+    "totalAmount": 1000,
+    "grandTotal": 900
+  }
+]

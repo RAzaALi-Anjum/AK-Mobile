@@ -6,7 +6,7 @@ const Invoice = require('../models/Invoice');
 // @route   POST /api/sales/checkout
 const checkout = async (req, res) => {
     try {
-        const { items, clientName, clientPhone } = req.body;
+        const { items, clientName, clientPhone, discount, paymentType, paidAmount } = req.body;
         // items: [{ productId, productName, productType, quantity, purchaseCostPerUnit, salePricePerUnit }]
 
         if (!items || !Array.isArray(items) || items.length === 0) {
@@ -67,10 +67,36 @@ const checkout = async (req, res) => {
 
         // Create Invoice Record
         const totalAmount = salesRecords.reduce((sum, sale) => sum + sale.totalSale, 0);
+        const discountAmount = Number(discount) || 0;
+
+        if (discountAmount > totalAmount) {
+            return res.status(400).json({ message: 'Discount cannot exceed total amount' });
+        }
+
+        const grandTotal = totalAmount - discountAmount;
+        let finalPaidAmount = Number(paidAmount) || 0;
+        const pType = paymentType || 'Full Payment';
+
+        if (pType === 'Full Payment') {
+            finalPaidAmount = grandTotal;
+        }
+
+        if (finalPaidAmount > grandTotal) {
+            return res.status(400).json({ message: 'Paid amount cannot exceed grand total' });
+        }
+
+        const remainingAmount = grandTotal - finalPaidAmount;
+        const orderStatus = remainingAmount > 0 ? 'Pending' : 'Paid';
+
+        const paymentHistory = [];
+        if (finalPaidAmount > 0) {
+            paymentHistory.push({ date: new Date(), amount: finalPaidAmount });
+        }
 
         const invoiceData = items.map(item => ({
             productId: item.productId,
             productName: item.productName,
+            productType: item.productType,
             quantity: item.quantity,
             purchaseCostPerUnit: item.purchaseCostPerUnit,
             salePricePerUnit: item.salePricePerUnit,
@@ -82,8 +108,17 @@ const checkout = async (req, res) => {
             clientName,
             clientPhone,
             products: invoiceData,
-            totalAmount
+            totalAmount,
+            discountAmount,
+            grandTotal,
+            paymentType: pType,
+            paidAmount: finalPaidAmount,
+            remainingAmount,
+            paymentHistory,
+            orderStatus
         });
+
+        console.log("SALE_CHECKOUT_SUCCESS_INVOICE_CREATED:", JSON.stringify(invoice, null, 2));
 
         res.status(201).json({
             message: 'Sale completed successfully',
@@ -120,42 +155,32 @@ const getIncome = async (req, res) => {
 
         // Category filter
         if (req.query.type) {
-            filter.productType = req.query.type;
+            filter['products.productType'] = req.query.type;
         }
 
-        // Date range filter
+        // Date range filter based on invoice creation for the overall list
         if (req.query.from || req.query.to) {
-            filter.saleDate = {};
+            filter.createdAt = {};
             if (req.query.from) {
-                filter.saleDate.$gte = new Date(req.query.from);
+                filter.createdAt.$gte = new Date(req.query.from);
             }
             if (req.query.to) {
                 const toDate = new Date(req.query.to);
                 toDate.setHours(23, 59, 59, 999);
-                filter.saleDate.$lte = toDate;
+                filter.createdAt.$lte = toDate;
             }
         }
 
-        const sales = await Sale.find(filter).sort({ saleDate: -1 });
+        const invoices = await Invoice.find(filter).sort({ createdAt: -1 });
 
         // Calculate summary totals
         let totalSales = 0;
         let totalPurchaseCost = 0;
-        let totalProfit = 0;
-        let totalLoss = 0;
 
         // Group by date for daily totals
         const dailyTotals = {};
-        sales.forEach((sale) => {
-            totalSales += sale.totalSale;
-            totalPurchaseCost += sale.totalPurchaseCost;
-            if (sale.profit >= 0) {
-                totalProfit += sale.profit;
-            } else {
-                totalLoss += Math.abs(sale.profit);
-            }
 
-            const dateKey = new Date(sale.saleDate).toISOString().split('T')[0];
+        const initDay = (dateKey) => {
             if (!dailyTotals[dateKey]) {
                 dailyTotals[dateKey] = {
                     date: dateKey,
@@ -165,17 +190,53 @@ const getIncome = async (req, res) => {
                     totalLoss: 0,
                 };
             }
-            dailyTotals[dateKey].totalSales += sale.totalSale;
-            dailyTotals[dateKey].totalPurchaseCost += sale.totalPurchaseCost;
-            if (sale.profit >= 0) {
-                dailyTotals[dateKey].totalProfit += sale.profit;
-            } else {
-                dailyTotals[dateKey].totalLoss += Math.abs(sale.profit);
+        };
+
+        invoices.forEach((invoice) => {
+            const invoicePurchaseCost = invoice.products.reduce((sum, p) => sum + ((p.purchaseCostPerUnit || 0) * (p.quantity || 1)), 0);
+
+            totalPurchaseCost += invoicePurchaseCost;
+
+            // Fallback for older records missing paidAmount
+            const actualPaidAmount = invoice.paidAmount !== undefined ? invoice.paidAmount : (invoice.totalAmount || 0);
+            totalSales += actualPaidAmount;
+
+            // Purchase cost applies to the day the invoice was created
+            const createDateKey = new Date(invoice.createdAt || Date.now()).toISOString().split('T')[0];
+            initDay(createDateKey);
+            dailyTotals[createDateKey].totalPurchaseCost += invoicePurchaseCost;
+
+            // Payments apply to the day they were made
+            if (invoice.paymentHistory && invoice.paymentHistory.length > 0) {
+                invoice.paymentHistory.forEach(payment => {
+                    if (payment.date && payment.amount) {
+                        const payDateKey = new Date(payment.date).toISOString().split('T')[0];
+                        initDay(payDateKey);
+                        dailyTotals[payDateKey].totalSales += payment.amount;
+                    }
+                });
+            } else if (!invoice.paymentHistory || invoice.paymentHistory.length === 0) {
+                // Fallback for old records with no distinct payment history - attribute to creation date
+                dailyTotals[createDateKey].totalSales += actualPaidAmount;
+            }
+        });
+
+        const overallProfit = totalSales - totalPurchaseCost;
+        const totalProfit = overallProfit > 0 ? overallProfit : 0;
+        const totalLoss = overallProfit < 0 ? Math.abs(overallProfit) : 0;
+
+        Object.keys(dailyTotals).forEach(key => {
+            const day = dailyTotals[key];
+            const dayProfit = day.totalSales - day.totalPurchaseCost;
+            if (dayProfit > 0) {
+                day.totalProfit = dayProfit;
+            } else if (dayProfit < 0) {
+                day.totalLoss = Math.abs(dayProfit);
             }
         });
 
         res.json({
-            sales,
+            sales: invoices, // Reusing 'sales' key for frontend compatibility (now holding Invoices)
             summary: {
                 totalSales,
                 totalPurchaseCost,
@@ -236,39 +297,69 @@ const getDashboardStats = async (req, res) => {
             { $sort: { _id: 1 } },
         ]);
 
-        // --- Monthly Sales & Profit (current month, day by day) ---
-        const monthlySales = await Sale.aggregate([
-            {
-                $match: {
-                    saleDate: { $gte: monthStart, $lte: monthEnd },
-                },
-            },
-            {
-                $group: {
-                    _id: { $dayOfMonth: '$saleDate' },
-                    totalSales: { $sum: '$totalSale' },
-                    totalProfit: { $sum: '$profit' },
-                },
-            },
-            { $sort: { _id: 1 } },
-        ]);
+        // Fetch all invoices relevant to the current year
+        const invoices = await Invoice.find({
+            $or: [
+                { createdAt: { $gte: yearStart, $lte: yearEnd } },
+                { 'paymentHistory.date': { $gte: yearStart, $lte: yearEnd } }
+            ]
+        });
 
-        // --- Yearly Sales & Profit (month by month) ---
-        const yearlySales = await Sale.aggregate([
-            {
-                $match: {
-                    saleDate: { $gte: yearStart, $lte: yearEnd },
-                },
-            },
-            {
-                $group: {
-                    _id: { $month: '$saleDate' },
-                    totalSales: { $sum: '$totalSale' },
-                    totalProfit: { $sum: '$profit' },
-                },
-            },
-            { $sort: { _id: 1 } },
-        ]);
+        const monthlySalesMap = {}; // for current month, day by day
+        const yearlySalesMap = {};  // for current year, month by month
+
+        // Initialize maps
+        for (let d = 1; d <= monthEnd.getDate(); d++) {
+            monthlySalesMap[d] = { _id: d, totalSales: 0, totalProfit: 0, purchaseCost: 0 };
+        }
+        for (let m = 1; m <= 12; m++) {
+            yearlySalesMap[m] = { _id: m, totalSales: 0, totalProfit: 0, purchaseCost: 0 };
+        }
+
+        invoices.forEach(inv => {
+            const invoiceCost = inv.products.reduce((acc, p) => acc + (p.purchaseCostPerUnit * p.quantity), 0);
+
+            // Assign cost based on creation date
+            const created = new Date(inv.createdAt);
+            if (created >= yearStart && created <= yearEnd) {
+                const m = created.getMonth() + 1;
+                yearlySalesMap[m].purchaseCost += invoiceCost;
+
+                if (created >= monthStart && created <= monthEnd) {
+                    const d = created.getDate();
+                    monthlySalesMap[d].purchaseCost += invoiceCost;
+                }
+            }
+
+            // Assign sales based on payment dates
+            if (inv.paymentHistory) {
+                inv.paymentHistory.forEach(payment => {
+                    const pDate = new Date(payment.date);
+                    if (pDate >= yearStart && pDate <= yearEnd) {
+                        const m = pDate.getMonth() + 1;
+                        yearlySalesMap[m].totalSales += payment.amount;
+
+                        if (pDate >= monthStart && pDate <= monthEnd) {
+                            const d = pDate.getDate();
+                            monthlySalesMap[d].totalSales += payment.amount;
+                        }
+                    }
+                });
+            }
+        });
+
+        // Compute profit = totalSales - purchaseCost for each interval
+        const monthlySales = Object.values(monthlySalesMap).map(day => ({
+            _id: day._id,
+            totalSales: day.totalSales,
+            totalProfit: day.totalSales - day.purchaseCost
+        })).sort((a, b) => a._id - b._id);
+
+        const yearlySales = Object.values(yearlySalesMap).map(month => ({
+            _id: month._id,
+            totalSales: month.totalSales,
+            totalProfit: month.totalSales - month.purchaseCost
+        })).sort((a, b) => a._id - b._id);
 
         res.json({
             currentMonth: now.toLocaleString('default', { month: 'long' }),

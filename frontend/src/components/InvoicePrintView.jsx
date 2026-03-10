@@ -180,13 +180,6 @@ const InvoicePrintView = ({ invoice, mode = 'auto-download', onClose }) => {
                                 {invoice.clientPhone}
                             </div>
                         </div>
-                        <div>
-                            <strong style={{ display: 'block', fontSize: '14px', marginBottom: '5px' }}>Ship To</strong>
-                            <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.4' }}>
-                                {invoice.clientName}<br /><br />
-                                {invoice.clientPhone}
-                            </div>
-                        </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3B82F6', marginBottom: '5px' }}>
@@ -235,23 +228,43 @@ const InvoicePrintView = ({ invoice, mode = 'auto-download', onClose }) => {
                             <tbody>
                                 <tr>
                                     <td style={{ padding: '6px 8px', fontWeight: 'bold' }}>Total</td>
-                                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>Rs {invoice.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>Rs {(invoice.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 </tr>
+                                {invoice.discountAmount > 0 && (
+                                    <tr>
+                                        <td style={{ padding: '6px 8px', fontWeight: 'bold' }}>(-) Discount</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', color: 'red' }}>Rs {invoice.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    </tr>
+                                )}
                                 <tr style={{ backgroundColor: '#60A5FA', color: '#fff' }}>
                                     <td style={{ padding: '6px 8px', fontWeight: 'bold' }}>Grand Total</td>
-                                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>Rs {invoice.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>Rs {(invoice.grandTotal || invoice.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 </tr>
                                 <tr>
                                     <td style={{ padding: '6px 8px' }}>Balance</td>
-                                    <td style={{ padding: '6px 8px', textAlign: 'right' }}>Rs {invoice.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    <td style={{ padding: '6px 8px', textAlign: 'right' }}>Rs {((invoice.remainingAmount !== undefined) ? invoice.remainingAmount : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {/* Signature */}
-                <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'flex-end', paddingRight: '20px' }}>
+                {/* Payment History & Signature */}
+                <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
+                    <div style={{ width: '40%', paddingLeft: '50px' }}>
+                        {invoice.paymentHistory && invoice.paymentHistory.length > 0 && (
+                            <div>
+                                <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', borderBottom: '1px solid #E5E7EB', paddingBottom: '5px' }}>Payment History</h4>
+                                {invoice.paymentHistory.map((pmt, idx) => (
+                                    <div key={idx} style={{ fontSize: '13px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Paid ({formatDate(pmt.date)})</span>
+                                        <span style={{ fontWeight: 'bold' }}>Rs {pmt.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <div style={{ textAlign: 'center' }}>
                         {/* Simple SVG to mimic a cursive signature 'A' */}
                         <svg width="100" height="40" viewBox="0 0 100 40">
